@@ -460,22 +460,17 @@ def validar_data(data_str):
 
 # Função para exibir a página inicial
 def home_page():
-    criar_tabela_usuarios()
-    criar_tabela_reservas()
-    
-    # Adiciona o logo à barra lateral
-    st.sidebar.image('logo.png', use_column_width=True) # Atualize o caminho para o logo conforme necessário
+    try:
+        # Adiciona o logo à barra lateral
+        st.sidebar.image('logo.png', use_column_width=True) # Atualize o caminho para o logo conforme necessário
 
-    st.markdown(css, unsafe_allow_html=True)
-
-    if st.session_state.get('usuario_logado'):
-        st.sidebar.header('Administração')
-        if st.sidebar.button('Limpar Banco de Dados'):
-            limpar_banco_dados()
-            st.session_state.clear()
-            st.experimental_set_query_params(pagina='home')
+        if st.session_state.get('usuario_logado'):
+            st.sidebar.header('Administração')
+            if st.sidebar.button('Limpar Banco de Dados', key='limpar_bd'):
+                limpar_banco_dados()
+                st.session_state.clear()
+                st.session_state.pagina = 'home'
             
-        with st.container(border=True):
             st.title('Reserva')
             col1, col2 = st.columns(2)
 
@@ -521,77 +516,78 @@ def home_page():
                 else:
                     st.error('O veículo já está reservado para o horário selecionado.')
 
-        with st.form(key='alterar_status_form'):
-            col1, col2 = st.columns(2)
+            with st.form(key='alterar_status_form'):
+                col1, col2 = st.columns(2)
 
-            with col1:
-                dtRetirada = st.date_input(label='Data de Retirada', key='dtRetirada_filtro', value=None, label_visibility='visible', format='DD/MM/YYYY')
+                with col1:
+                    dtRetirada = st.date_input(label='Data de Retirada', key='dtRetirada_filtro', value=None, label_visibility='visible', format='DD/MM/YYYY')
 
-            with col2:
-                dtDevolucao = st.date_input(label='Data de Devolução', key='dtDevolucao_filtro', value=None, label_visibility='visible', format='DD/MM/YYYY')
+                with col2:
+                    dtDevolucao = st.date_input(label='Data de Devolução', key='dtDevolucao_filtro', value=None, label_visibility='visible', format='DD/MM/YYYY')
 
-            col3, col4 = st.columns(2)
+                col3, col4 = st.columns(2)
 
-            with col3:
-                carro = st.multiselect(label='Carro', key='carro_filtro', options=['SWQ1F92 - Nissan Versa Novo', 'SVO6A16 - Saveiro', 'GEZ5262 - Nissan Versa'])
+                with col3:
+                    carro = st.multiselect(label='Carro', key='carro_filtro', options=['SWQ1F92 - Nissan Versa Novo', 'SVO6A16 - Saveiro', 'GEZ5262 - Nissan Versa'])
 
-            with col4:
-                cidade = st.multiselect(label='Cidade', key='cidade_filtro', options=['Rio Claro', 'Lençóis Paulista', 'São Carlos', 'Araras', 'Ribeirão Preto',
-                                                                                    'Jaboticabal', 'Araraquara', 'Leme', 'Piracicaba', 'São Paulo', 'Campinas', 'Ibate', 'Porto Ferreira'])
+                with col4:
+                    cidade = st.multiselect(label='Cidade', key='cidade_filtro', options=['Rio Claro', 'Lençóis Paulista', 'São Carlos', 'Araras', 'Ribeirão Preto',
+                                                                                        'Jaboticabal', 'Araraquara', 'Leme', 'Piracicaba', 'São Paulo', 'Campinas', 'Ibate', 'Porto Ferreira'])
 
-            status_options = ['Agendado', 'Cancelado']
-            status_selecionado = st.selectbox('Alterar Status', status_options, key='status_selecionado')
+                status_options = ['Agendado', 'Cancelado']
+                status_selecionado = st.selectbox('Alterar Status', status_options, key='status_selecionado')
 
+                col5, col6 = st.columns(2)
 
-            col5, col6 = st.columns(2)
+                with col5:
+                    buscar_reserva = st.form_submit_button(label='Buscar Reserva', key='buscar_reserva')
+            
+                with col6:
+                    alterar_status = st.form_submit_button(label='Alterar Status', key='alterar_status')
 
-            with col5:
-                buscar_reserva = st.form_submit_button(label='Buscar Reserva')
-        
-            with col6:
-                alterar_status = st.form_submit_button(label='Alterar Status')
-
-            if buscar_reserva:
-                df_reservas = buscar_reservas_filtros(dtRetirada, dtDevolucao, carro, cidade)
-                if df_reservas.empty:
-                    st.error('Nenhuma reserva encontrada.')
-                else:
-                    df_selecao = criar_df_para_visualizacao(df_reservas)
-                    st.dataframe(df_selecao)
-
-                    # Salva o DataFrame para uso posterior, como para alterar status
-                    st.session_state.df_selecao = df_selecao
-
-            if alterar_status:
-                if 'df_selecao' in st.session_state:
-                    reserva_id = st.selectbox('Selecionar Reserva', st.session_state.df_selecao['id'].values)
-                    reserva_selecionada = st.session_state.df_selecao[st.session_state.df_selecao['id'] == reserva_id]
-
-                    st.write('Detalhes da Reserva Selecionada:')
-                    st.write(reserva_selecionada)
-
-                    if atualizar_status_reserva(reserva_id, status_selecionado):
-                        st.success('Status da reserva alterado com sucesso!')
+                if buscar_reserva:
+                    df_reservas = buscar_reservas_filtros(dtRetirada, dtDevolucao, carro, cidade)
+                    if df_reservas.empty:
+                        st.error('Nenhuma reserva encontrada.')
                     else:
-                        st.error('Erro ao alterar o status da reserva.')
-                else:
-                    st.error('Por favor, pesquise uma reserva primeiro.')
-                    
+                        df_selecao = criar_df_para_visualizacao(df_reservas)
+                        st.dataframe(df_selecao)
 
-                if st.button('Ver todas as reservas', key='ver_todas_reservas'):
-                    st.session_state.pagina = 'reservas'
-                    st.experimental_set_query_params(pagina='reservas')
+                        # Salva o DataFrame para uso posterior, como para alterar status
+                        st.session_state.df_selecao = df_selecao
 
-    else:
-        st.sidebar.subheader('')
-        menu_autenticacao = st.sidebar.radio('', ['Login', 'Cadastro', 'Recuperar Senha'])
+                if alterar_status:
+                    if 'df_selecao' in st.session_state:
+                        reserva_id = st.selectbox('Selecionar Reserva', st.session_state.df_selecao['id'].values, key='reserva_id')
+                        reserva_selecionada = st.session_state.df_selecao[st.session_state.df_selecao['id'] == reserva_id]
 
-        if menu_autenticacao == 'Login':
-            login()
-        elif menu_autenticacao == 'Cadastro':
-            cadastro()
-        elif menu_autenticacao == 'Recuperar Senha':
-            recuperar_senha()
+                        st.write('Detalhes da Reserva Selecionada:')
+                        st.write(reserva_selecionada)
+
+                        if atualizar_status_reserva(reserva_id, status_selecionado):
+                            st.success('Status da reserva alterado com sucesso!')
+                        else:
+                            st.error('Erro ao alterar o status da reserva.')
+                    else:
+                        st.error('Por favor, pesquise uma reserva primeiro.')
+
+            if st.button('Ver todas as reservas', key='ver_todas_reservas'):
+                st.session_state.pagina = 'reservas'
+
+        else:
+            st.sidebar.subheader('')
+            menu_autenticacao = st.sidebar.radio('', ['Login', 'Cadastro', 'Recuperar Senha'], key='menu_autenticacao')
+
+            if menu_autenticacao == 'Login':
+                login()
+            elif menu_autenticacao == 'Cadastro':
+                cadastro()
+            elif menu_autenticacao == 'Recuperar Senha':
+                recuperar_senha()
+
+    except Exception as e:
+        st.error(f"Erro: {e}")
+        print(f"Erro: {e}")
 
 css = """
 <style>
@@ -605,6 +601,5 @@ if st.session_state.pagina == 'home':
 elif st.session_state.pagina == 'reservas':
     st.title('Todas as Reservas')
     exibir_reservas(pagina='todas')
-    if st.button('Voltar'):
+    if st.button('Voltar', key='voltar_home'):
         st.session_state.pagina = 'home'
-        st.experimental_set_query_params(pagina='home')
