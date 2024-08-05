@@ -462,7 +462,7 @@ def validar_data(data_str):
 def home_page():
     try:
         # Adiciona o logo à barra lateral
-        st.sidebar.image('logo.png', use_column_width=True) # Atualize o caminho para o logo conforme necessário
+        st.sidebar.image('logo.png', use_column_width=True)  # Atualize o caminho para o logo conforme necessário
 
         if st.session_state.get('usuario_logado'):
             st.sidebar.header('Administração')
