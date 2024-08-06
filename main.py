@@ -74,10 +74,43 @@ def recuperar_senha():
     email = st.text_input('E-mail', placeholder='Digite seu e-mail')
     if st.button('Enviar link de recuperação'):
         nova_senha = 'senha123'  # Idealmente, gere uma senha aleatória ou forneça um link para redefinição
-        atualizar_senha(email, nova_senha)  # Atualiza a senha no banco de dados
-        
-        st.success('E-mail de recuperação enviado!')
+        if atualizar_senha(email, nova_senha):  # Atualiza a senha no banco de dados
+            if enviar_email_recuperacao(email, nova_senha):  # Envia o e-mail de recuperação
+                st.success('E-mail de recuperação enviado!')
+            else:
+                st.error('Erro ao enviar o e-mail de recuperação.')
+        else:
+            st.error('Erro ao atualizar a senha no banco de dados.')
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+def enviar_email_recuperacao(email_destino, nova_senha):
+    try:
+        # Configurações do servidor SMTP
+        smtp_server = 'smtp.gmail.com'  # Substitua pelo servidor SMTP do seu provedor de e-mail
+        smtp_port = 587
+        remetente = 'seu_email@gmail.com'  # Substitua pelo seu e-mail
+        senha_remetente = 'sua_senha_de_aplicativo'  # Use uma senha de aplicativo, não a senha da sua conta
+
+        # Configura o conteúdo do e-mail
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = email_destino
+        msg['Subject'] = 'Recuperação de Senha'
+        body = f'Sua nova senha é: {nova_senha}'
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Envia o e-mail
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Inicia TLS
+        server.login(remetente, senha_remetente)
+        server.sendmail(remetente, email_destino, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
+
     
     
 
