@@ -111,6 +111,25 @@ def enviar_email_recuperacao(email_destino, nova_senha):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
+
+
+# Função para atualizar a senha do usuário
+def atualizar_senha(email, nova_senha):
+    senha_hash = hashlib.sha256(nova_senha.encode()).hexdigest()  # Criptografa a nova senha
+    try:
+        with sqlite3.connect('reservas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE usuarios SET senha = ? WHERE email = ?', (senha_hash, email))
+            conn.commit()
+            if cursor.rowcount == 0:
+                st.error("Nenhum usuário encontrado com o e-mail fornecido.")
+                return False
+            return True
+    except sqlite3.Error as e:
+        st.error(f"Erro ao atualizar a senha: {e}")
+        return False
+
+
     
     
 
