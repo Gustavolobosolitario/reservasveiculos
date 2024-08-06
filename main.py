@@ -615,7 +615,7 @@ def home_page():
         exibir_reservas()
 
     else:
-        menu_autenticacao = st.sidebar.radio('', ['Login', 'Cadastro', 'Recuperar Senha'])
+        menu_autenticacao = st.sidebar.radio('', ['Login', 'Cadastro'])
 
         if menu_autenticacao == 'Login':
             login()
