@@ -560,8 +560,9 @@ def home_page():
                     'Destino': descDestino
                 }
                 st.success('Reserva cadastrada com sucesso!')
-                st.json(dados)
-
+                # Remova ou comente a linha abaixo para não exibir os dados da reserva
+                # st.json(dados)
+            
                 if veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo):
                     if adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo, descDestino):
                         st.success('Reserva registrada no banco de dados com sucesso!')
