@@ -550,26 +550,30 @@ def home_page():
             ])
 
             if st.button(label='Cadastrar', key='botao_cadastrar'):
-                dados = {
-                    'Nome Completo': nome_completo,
-                    'Data Retirada': dtRetirada,
-                    'Hora Retirada': hrRetirada,
-                    'Data Devolucao': dtDevolucao,
-                    'Hora Devolucao': hrDevolucao,
-                    'Carro': descVeiculo,
-                    'Destino': descDestino
-                }
-                st.success('Reserva cadastrada com sucesso!')
-                # Remova ou comente a linha abaixo para não exibir os dados da reserva
-                # st.json(dados)
-            
-                if veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo):
-                    if adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo, descDestino):
-                        st.success('Reserva registrada no banco de dados com sucesso!')
-                    else:
-                        st.error('Falha ao registrar a reserva.')
+                # Verifica se a data de retirada é anterior ao dia de hoje
+                if dtRetirada < datetime.now().date():
+                    st.error('Não é possível fazer uma reserva para uma data passada.')
                 else:
-                    st.error('O veículo já está reservado para o horário selecionado.')
+                    dados = {
+                        'Nome Completo': nome_completo,
+                        'Data Retirada': dtRetirada,
+                        'Hora Retirada': hrRetirada,
+                        'Data Devolucao': dtDevolucao,
+                        'Hora Devolucao': hrDevolucao,
+                        'Carro': descVeiculo,
+                        'Destino': descDestino
+                    }
+                    st.success('Reserva cadastrada com sucesso!')
+                    # Remova ou comente a linha abaixo para não exibir os dados da reserva
+                    # st.json(dados)
+                
+                    if veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo):
+                        if adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, descVeiculo, descDestino):
+                            st.success('Reserva registrada no banco de dados com sucesso!')
+                        else:
+                            st.error('Falha ao registrar a reserva.')
+                    else:
+                        st.error('O veículo já está reservado para o horário selecionado.')
 
         with st.form(key='buscar_reserva'):
             st.subheader('Consultar Reservas')
