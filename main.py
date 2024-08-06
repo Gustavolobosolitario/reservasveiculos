@@ -519,6 +519,10 @@ def home_page():
             limpar_banco_dados()
             st.session_state.clear()
             st.experimental_set_query_params(pagina='home')
+
+        # Certifica-se de que nome_completo está inicializado
+        if 'nome_completo' not in st.session_state:
+            st.session_state.nome_completo = None
             
         with st.container(border=True):
             st.title('Reserva')
