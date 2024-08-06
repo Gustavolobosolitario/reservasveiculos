@@ -25,7 +25,7 @@ if 'usuario_logado' not in st.session_state:
 # Inicializa a variável de controle da página atual
 if 'pagina' not in st.session_state:
     st.session_state.pagina = 'home'
-
+    
 # Inicializa a variável de controle de nome completo
 if 'nome_completo' not in st.session_state:
     st.session_state.nome_completo = None
@@ -133,7 +133,6 @@ def atualizar_senha(email, nova_senha):
         st.error(f"Erro ao atualizar a senha: {e}")
         return False
 
-
     
     
 
@@ -218,6 +217,7 @@ def verificar_usuario(email, senha):
 
 
 
+
 # Função para atualizar a senha do usuário
 def atualizar_senha(email, nova_senha):
     senha_hash = hashlib.sha256(nova_senha.encode()).hexdigest()  # Criptografa a nova senha
@@ -294,13 +294,7 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
 
 
 
-# Função para atualizar o status de uma reserva
-def atualizar_status_reserva(reserva_id, novo_status):
-    with sqlite3.connect('reservas.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE reservas SET status = ? WHERE id = ?', (novo_status, reserva_id))
-        conn.commit()
-    return cursor.rowcount > 0
+
     
     
     
@@ -393,6 +387,7 @@ def visualizar_reservas():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Função para verificar se o veículo está disponível
+# Função para verificar se o veículo está disponível
 def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
     df_reservas = carregar_reservas_do_banco()
     df_reservas['dtRetirada'] = pd.to_datetime(df_reservas['dtRetirada'], format='%d/%m/%Y')
@@ -401,8 +396,7 @@ def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
     df_reservas['hrDevolucao'] = pd.to_datetime(df_reservas['hrDevolucao'], format='%H:%M:%S').dt.time
 
     for index, row in df_reservas.iterrows():
-        if row['carro'] == carro:
-            # Converte dtRetirada e dtDevolucao para o mesmo formato de row['dtRetirada'] e row['dtDevolucao']
+        if row['carro'] == carro and row['status'] != 'Cancelado':  # Verifica o status
             dtRetirada_ts = pd.Timestamp(dtRetirada)
             dtDevolucao_ts = pd.Timestamp(dtDevolucao)
             
@@ -412,6 +406,21 @@ def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
                    (hrRetirada <= row['hrRetirada'] and hrDevolucao >= row['hrDevolucao']):
                     return False
     return True
+
+# Função para atualizar o status de uma reserva
+def atualizar_status_reserva(reserva_id, novo_status):
+    with sqlite3.connect('reservas.db') as conn:
+        cursor = conn.cursor()
+        # Verifica se o usuário logado é o dono da reserva
+        cursor.execute('SELECT email_usuario FROM reservas WHERE id = ?', (reserva_id,))
+        resultado = cursor.fetchone()
+        if resultado and resultado[0] == st.session_state.usuario_logado:
+            cursor.execute('UPDATE reservas SET status = ? WHERE id = ?', (novo_status, reserva_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        else:
+            st.error("Apenas o usuário que fez a reserva pode alterá-la.")
+            return False
 
 
 
@@ -612,8 +621,7 @@ def home_page():
             login()
         elif menu_autenticacao == 'Cadastro':
             cadastro()
-        elif menu_autenticacao == 'Recuperar Senha':
-            recuperar_senha()
+        
 
 css = """
 <style>
