@@ -26,6 +26,10 @@ if 'usuario_logado' not in st.session_state:
 if 'pagina' not in st.session_state:
     st.session_state.pagina = 'home'
 
+# Inicializa a variável de controle de nome completo
+if 'nome_completo' not in st.session_state:
+    st.session_state.nome_completo = None
+
 
 
 
