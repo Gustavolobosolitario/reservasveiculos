@@ -196,7 +196,6 @@ def adicionar_usuario(nome_completo, email, senha):
         return False
 
 
-# Função para verificar as credenciais do usuário
 def verificar_usuario(email, senha):
     senha_hash = hashlib.sha256(senha.encode()).hexdigest()
     with sqlite3.connect('reservas.db') as conn:
