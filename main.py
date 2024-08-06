@@ -551,9 +551,11 @@ def home_page():
 
             if st.button(label='Cadastrar', key='botao_cadastrar'):
                 hoje = datetime.now().date()
-                # Verifica se a data de retirada é anterior ao dia de hoje
-                if dtRetirada < hoje or dtDevolucao < hoje:
-                    st.error('Não é possível fazer uma reserva para uma data passada.')
+                # Verifica se a data de retirada ou a data de devolução é anterior ao dia de hoje
+                if dtRetirada < hoje:
+                    st.error('Não é possível fazer uma reserva para uma data de retirada anterior a hoje.')
+                elif dtDevolucao < hoje:
+                    st.error('Não é possível fazer uma reserva para uma data de devolução anterior a hoje.')
                 else:
                     dados = {
                         'Nome Completo': nome_completo,
