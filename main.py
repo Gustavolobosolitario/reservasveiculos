@@ -6,6 +6,7 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
 
 # Configura a página do Streamlit
 st.set_page_config(layout='wide', page_title="Sistema de Reservas", page_icon=":car:")
@@ -21,35 +22,10 @@ if 'usuario_logado' not in st.session_state:
 # Inicializa a variável de controle da página atual
 if 'pagina' not in st.session_state:
     st.session_state.pagina = 'home'
-    
+
 # Inicializa a variável de controle de nome completo
 if 'nome_completo' not in st.session_state:
     st.session_state.nome_completo = None
-
-# Configurações do e-mail do gestor e do servidor SMTP
-GESTOR_EMAIL = 'gestor@empresa.com'
-SMTP_SERVER = 'smtp.office365.com'
-SMTP_PORT = 587
-EMAIL_REMITENTE = 'seu_email@outlook.com'
-SENHA_REMITENTE = 'sua_senha_de_aplicativo'
-
-# Função para enviar e-mails
-def enviar_email(destinatario, assunto, corpo):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_REMITENTE
-        msg['To'] = destinatario
-        msg['Subject'] = assunto
-        msg.attach(MIMEText(corpo, 'plain'))
-
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(EMAIL_REMITENTE, SENHA_REMITENTE)
-            server.sendmail(EMAIL_REMITENTE, destinatario, msg.as_string())
-        return True
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-        return False
 
 # Função de login
 def login():
@@ -99,9 +75,68 @@ def recuperar_senha():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def enviar_email_recuperacao(email_destino, nova_senha):
-    assunto = 'Recuperação de Senha'
-    corpo = f'Sua nova senha é: {nova_senha}'
-    return enviar_email(email_destino, assunto, corpo)
+    try:
+        # Configurações do servidor SMTP do Microsoft 365/Outlook
+        smtp_server = 'smtp.office365.com'
+        smtp_port = 587
+        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail
+        senha_remetente = 'sua_senha'  # Use uma senha de aplicativo, não a senha da sua conta
+
+        # Configura o conteúdo do e-mail
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = email_destino
+        msg['Subject'] = 'Recuperação de Senha'
+        body = f'Sua nova senha é: {nova_senha}'
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Envia o e-mail
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Inicia TLS
+        server.login(remetente, senha_remetente)
+        server.sendmail(remetente, email_destino, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
+
+def enviar_notificacao_gestor(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
+    try:
+        # Configurações do servidor SMTP do Microsoft 365/Outlook
+        smtp_server = 'smtp.office365.com'
+        smtp_port = 587
+        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail
+        senha_remetente = 'sua_senha'  # Use uma senha de aplicativo, não a senha da sua conta
+        gestor_email = 'gestor@empresa.com'  # Substitua pelo e-mail do gestor
+
+        # Configura o conteúdo do e-mail
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = gestor_email
+        msg['Subject'] = 'Nova Reserva Realizada'
+        body = f"""
+        Uma nova reserva foi realizada:
+        - Nome: {nome_completo}
+        - Veículo: {carro}
+        - Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
+        - Hora de Retirada: {hrRetirada.strftime('%H:%M')}
+        - Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
+        - Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
+        - Destino: {destino}
+        """
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Envia o e-mail
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()  # Inicia TLS
+        server.login(remetente, senha_remetente)
+        server.sendmail(remetente, gestor_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
 
 # Função para atualizar a senha do usuário
 def atualizar_senha(email, nova_senha):
@@ -187,7 +222,7 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
             print("Reserva adicionada com sucesso.")
             
             # Notificar gestor sobre nova reserva
-            notificar_gestor_reserva(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino_str)
+            enviar_notificacao_gestor(st.session_state.nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino_str)
             
             return True
         else:
@@ -196,21 +231,6 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
     except sqlite3.Error as e:
         print(f"Erro ao adicionar reserva: {e}")
         return False
-
-# Função para enviar notificação ao gestor
-def notificar_gestor_reserva(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
-    assunto = 'Nova Reserva Realizada'
-    corpo = f"""
-    Uma nova reserva foi realizada:
-    - Nome: {nome_completo}
-    - Veículo: {carro}
-    - Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
-    - Hora de Retirada: {hrRetirada.strftime('%H:%M')}
-    - Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
-    - Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
-    - Destino: {destino}
-    """
-    enviar_email(GESTOR_EMAIL, assunto, corpo)
 
 # Função para liberar a vaga quando a reserva é cancelada
 def liberar_vaga(reserva_id):
@@ -302,7 +322,7 @@ def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
     df_reservas['dtRetirada'] = pd.to_datetime(df_reservas['dtRetirada'], format='%d/%m/%Y')
     df_reservas['dtDevolucao'] = pd.to_datetime(df_reservas['dtDevolucao'], format='%d/%m/%Y')
     df_reservas['hrRetirada'] = pd.to_datetime(df_reservas['hrRetirada'], format='%H:%M:%S').dt.time
-    df_reservas['hrDevolucao'] = pd.to_datetime(df_reservas['hrDevolucao'], format='%H:%M:%S').dt.time
+    df_reservas['hrDevolucao'] = pd.to_datetime(df['hrDevolucao'], format='%H:%M:%S').dt.time
 
     for index, row in df_reservas.iterrows():
         if row['carro'] == carro and row['status'] != 'Cancelado':  # Verifica o status
