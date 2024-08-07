@@ -557,7 +557,7 @@ def home_page():
                 if dtRetirada < hoje:
                     st.error('Não é possível fazer uma reserva para uma data de retirada anterior a hoje.')
                 # Verifica se a data de devolução é anterior ao dia de hoje
-                elif dtDevolucao <= hoje:
+                elif dtDevolucao < hoje:
                     st.error('A data de devolução não pode ser anterior ao dia de hoje.')
                 # Verifica se a data de devolução é anterior à data de retirada
                 elif dtDevolucao <= dtRetirada:
