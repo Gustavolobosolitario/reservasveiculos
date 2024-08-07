@@ -6,10 +6,6 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
-
-
-
 
 # Configura a página do Streamlit
 st.set_page_config(layout='wide', page_title="Sistema de Reservas", page_icon=":car:")
@@ -30,12 +26,30 @@ if 'pagina' not in st.session_state:
 if 'nome_completo' not in st.session_state:
     st.session_state.nome_completo = None
 
+# Configurações do e-mail do gestor e do servidor SMTP
+GESTOR_EMAIL = 'gestor@empresa.com'
+SMTP_SERVER = 'smtp.office365.com'
+SMTP_PORT = 587
+EMAIL_REMITENTE = 'seu_email@outlook.com'
+SENHA_REMITENTE = 'sua_senha_de_aplicativo'
 
+# Função para enviar e-mails
+def enviar_email(destinatario, assunto, corpo):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = EMAIL_REMITENTE
+        msg['To'] = destinatario
+        msg['Subject'] = assunto
+        msg.attach(MIMEText(corpo, 'plain'))
 
-
-
-
-
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_REMITENTE, SENHA_REMITENTE)
+            server.sendmail(EMAIL_REMITENTE, destinatario, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
 
 # Função de login
 def login():
@@ -49,8 +63,6 @@ def login():
             st.session_state.pagina = 'home'  # Navega para a página inicial
         else:
             st.error('E-mail ou senha incorretos.')
-            
-            
 
 # Função de cadastro
 def cadastro():
@@ -70,7 +82,6 @@ def cadastro():
             st.error('As senhas não correspondem.')
     st.markdown('</div>', unsafe_allow_html=True)
 
-
 # Função de recuperação de senha
 def recuperar_senha():
     st.markdown('<div style="background-color:#f0f2f6;padding:20px;border-radius:8px;">', unsafe_allow_html=True)
@@ -87,35 +98,10 @@ def recuperar_senha():
             st.error('Erro ao atualizar a senha no banco de dados.')
     st.markdown('</div>', unsafe_allow_html=True)
 
-
 def enviar_email_recuperacao(email_destino, nova_senha):
-    try:
-        # Configurações do servidor SMTP
-        smtp_server = 'smtp.gmail.com'  # Substitua pelo servidor SMTP do seu provedor de e-mail
-        smtp_port = 587
-        remetente = 'seu_email@gmail.com'  # Substitua pelo seu e-mail
-        senha_remetente = 'sua_senha_de_aplicativo'  # Use uma senha de aplicativo, não a senha da sua conta
-
-        # Configura o conteúdo do e-mail
-        msg = MIMEMultipart()
-        msg['From'] = remetente
-        msg['To'] = email_destino
-        msg['Subject'] = 'Recuperação de Senha'
-        body = f'Sua nova senha é: {nova_senha}'
-        msg.attach(MIMEText(body, 'plain'))
-
-        # Envia o e-mail
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Inicia TLS
-        server.login(remetente, senha_remetente)
-        server.sendmail(remetente, email_destino, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-        return False
-
-
+    assunto = 'Recuperação de Senha'
+    corpo = f'Sua nova senha é: {nova_senha}'
+    return enviar_email(email_destino, assunto, corpo)
 
 # Função para atualizar a senha do usuário
 def atualizar_senha(email, nova_senha):
@@ -133,9 +119,6 @@ def atualizar_senha(email, nova_senha):
         st.error(f"Erro ao atualizar a senha: {e}")
         return False
 
-    
-    
-
 # Função para criar a tabela de usuários
 def criar_tabela_usuarios():
     with sqlite3.connect('reservas.db') as conn:
@@ -146,43 +129,6 @@ def criar_tabela_usuarios():
                             email TEXT UNIQUE,
                             senha TEXT)''')
         conn.commit()
-
-        
-        
-        
-def adicionar_coluna_nome_completo():
-    try:
-        with sqlite3.connect('reservas.db') as conn:
-            cursor = conn.cursor()
-            cursor.execute('ALTER TABLE reservas ADD COLUMN nome_completo TEXT')
-            conn.commit()
-    except sqlite3.OperationalError as e:
-        st.error(f"Erro ao adicionar a coluna: {e}")
-
-
-
-
-
-# Função para criar a tabela de reservas
-def criar_tabela_reservas():
-    with sqlite3.connect('reservas.db') as conn:
-        cursor = conn.cursor()
-        # Verifica se a tabela já existe para não recriar
-        cursor.execute('''CREATE TABLE IF NOT EXISTS reservas (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            nome_completo TEXT,
-                            email_usuario TEXT,
-                            dtRetirada TEXT,
-                            dtDevolucao TEXT,
-                            hrRetirada TEXT,
-                            hrDevolucao TEXT,
-                            carro TEXT,
-                            cidade TEXT,
-                            status TEXT)''')
-        conn.commit()
-
-
-
 
 # Função para adicionar um novo usuário
 def adicionar_usuario(nome_completo, email, senha):
@@ -198,7 +144,6 @@ def adicionar_usuario(nome_completo, email, senha):
         print(f"Erro ao adicionar usuário: {e}")
         return False
 
-
 def verificar_usuario(email, senha):
     senha_hash = hashlib.sha256(senha.encode()).hexdigest()
     with sqlite3.connect('reservas.db') as conn:
@@ -213,18 +158,6 @@ def verificar_usuario(email, senha):
         else:
             print("E-mail ou senha incorretos.")
             return False
-
-
-
-
-
-# Função para atualizar a senha do usuário
-def atualizar_senha(email, nova_senha):
-    senha_hash = hashlib.sha256(nova_senha.encode()).hexdigest()  # Criptografa a nova senha
-    with sqlite3.connect('reservas.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE usuarios SET senha = ? WHERE email = ?', (senha_hash, email))
-        conn.commit()
 
 # Função para arredondar a hora para o intervalo mais próximo
 def arredondar_para_intervalo(time_obj, intervalo_mins=30):
@@ -254,7 +187,7 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
             print("Reserva adicionada com sucesso.")
             
             # Notificar gestor sobre nova reserva
-            #enviar_notificacao_gestor(st.session_state.nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino_str)
+            notificar_gestor_reserva(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino_str)
             
             return True
         else:
@@ -263,51 +196,28 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
     except sqlite3.Error as e:
         print(f"Erro ao adicionar reserva: {e}")
         return False
-    
-    
-    
-    
-    
-    
-    
 
 # Função para enviar notificação ao gestor
-#def enviar_notificacao_gestor(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
-    #gestor_email = 'analytics@vilaurbe.com.br'  # Substitua pelo e-mail do gestor
-    #subject = 'Nova Reserva Realizada'
-    #body = f"""
-    #Uma nova reserva foi realizada:
-    #- Nome: {nome_completo}
-    #- Veículo: {carro}
-    #- Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
-    #- Hora de Retirada: {hrRetirada.strftime('%H:%M')}
-    #- Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
-    #- Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
-    #- Destino: {destino}
-    #"""
-    #enviar_email(gestor_email, subject, body)
+def notificar_gestor_reserva(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
+    assunto = 'Nova Reserva Realizada'
+    corpo = f"""
+    Uma nova reserva foi realizada:
+    - Nome: {nome_completo}
+    - Veículo: {carro}
+    - Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
+    - Hora de Retirada: {hrRetirada.strftime('%H:%M')}
+    - Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
+    - Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
+    - Destino: {destino}
+    """
+    enviar_email(GESTOR_EMAIL, assunto, corpo)
 
-
-
-
-
-
-
-
-
-    
-    
-    
 # Função para liberar a vaga quando a reserva é cancelada
 def liberar_vaga(reserva_id):
     with sqlite3.connect('reservas.db') as conn:
         cursor = conn.cursor()
-        # Lógica para liberar a vaga (por exemplo, remover a reserva do banco de dados ou marcar como disponível)
-        # Aqui está um exemplo de como liberar a vaga ao excluir a reserva:
         cursor.execute('DELETE FROM reservas WHERE id = ?', (reserva_id,))
         conn.commit()
-    
-    
 
 # Função para estilizar a visualização de reservas com base no status
 def estilizar_reservas(df):
@@ -387,7 +297,6 @@ def visualizar_reservas():
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Função para verificar se o veículo está disponível
-# Função para verificar se o veículo está disponível
 def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
     df_reservas = carregar_reservas_do_banco()
     df_reservas['dtRetirada'] = pd.to_datetime(df_reservas['dtRetirada'], format='%d/%m/%Y')
@@ -422,9 +331,6 @@ def atualizar_status_reserva(reserva_id, novo_status):
             st.error("Apenas o usuário que fez a reserva pode alterá-la.")
             return False
 
-
-
-
 # Função para exibir reservas na interface
 def exibir_reservas():
     df_reservas = carregar_reservas_do_banco()
@@ -453,10 +359,6 @@ def exibir_reservas():
         st.dataframe(df_reservas, use_container_width=True)
     else:
         st.error("Nenhuma reserva encontrada.")
-
-
-
-
 
 # Função para verificar o status de uma reserva específica
 def verificar_status_reserva(data_reserva, hora_inicio, hora_fim, carro):
@@ -487,11 +389,10 @@ def limpar_banco_dados():
             criar_tabela_usuarios()
     except sqlite3.OperationalError as e:
         st.error(f"Erro ao acessar o banco de dados: {e}")
-        
+
 def formatar_data(data):
     """Formata a data para o formato dia/mês/ano."""
     return data.strftime('%d/%m/%Y')
-
 
 # Função para validar e converter uma string para data
 def validar_data(data_str):
@@ -500,8 +401,6 @@ def validar_data(data_str):
     except ValueError:
         st.error("Formato de data inválido. Use o formato dia/mês/ano.")
         return None
-
-
 
 # Função para exibir a página inicial
 def home_page():
@@ -635,7 +534,6 @@ def home_page():
             login()
         elif menu_autenticacao == 'Cadastro':
             cadastro()
-        
 
 css = """
 <style>
