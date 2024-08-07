@@ -22,10 +22,53 @@ if 'usuario_logado' not in st.session_state:
 # Inicializa a variável de controle da página atual
 if 'pagina' not in st.session_state:
     st.session_state.pagina = 'home'
-
+    
 # Inicializa a variável de controle de nome completo
 if 'nome_completo' not in st.session_state:
     st.session_state.nome_completo = None
+
+# Função para criar a tabela de usuários
+def criar_tabela_usuarios():
+    with sqlite3.connect('reservas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
+                            id INTEGER PRIMARY KEY,
+                            nome_completo TEXT,
+                            email TEXT UNIQUE,
+                            senha TEXT)''')
+        conn.commit()
+
+# Função para criar a tabela de reservas
+def criar_tabela_reservas():
+    with sqlite3.connect('reservas.db') as conn:
+        cursor = conn.cursor()
+        # Verifica se a tabela já existe para não recriar
+        cursor.execute('''CREATE TABLE IF NOT EXISTS reservas (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            nome_completo TEXT,
+                            email_usuario TEXT,
+                            dtRetirada TEXT,
+                            dtDevolucao TEXT,
+                            hrRetirada TEXT,
+                            hrDevolucao TEXT,
+                            carro TEXT,
+                            cidade TEXT,
+                            status TEXT)''')
+        conn.commit()
+
+# Função para adicionar um novo usuário
+def adicionar_usuario(nome_completo, email, senha):
+    senha_hash = hashlib.sha256(senha.encode()).hexdigest()  # Criptografa a senha
+    try:
+        with sqlite3.connect('reservas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO usuarios (nome_completo, email, senha) VALUES (?, ?, ?)', (nome_completo, email, senha_hash))
+            conn.commit()
+        print(f"Usuário adicionado: {nome_completo}, {email}")
+        return True
+    except sqlite3.IntegrityError as e:
+        print(f"Erro ao adicionar usuário: {e}")
+        return False
 
 # Função de login
 def login():
@@ -79,8 +122,8 @@ def enviar_email_recuperacao(email_destino, nova_senha):
         # Configurações do servidor SMTP do Microsoft 365/Outlook
         smtp_server = 'smtp.office365.com'
         smtp_port = 587
-        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail
-        senha_remetente = 'sua_senha'  # Use uma senha de aplicativo, não a senha da sua conta
+        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail do Outlook
+        senha_remetente = 'sua_senha_de_aplicativo'  # Use uma senha de aplicativo, não a senha da sua conta
 
         # Configura o conteúdo do e-mail
         msg = MIMEMultipart()
@@ -95,43 +138,6 @@ def enviar_email_recuperacao(email_destino, nova_senha):
         server.starttls()  # Inicia TLS
         server.login(remetente, senha_remetente)
         server.sendmail(remetente, email_destino, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Erro ao enviar e-mail: {e}")
-        return False
-
-def enviar_notificacao_gestor(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
-    try:
-        # Configurações do servidor SMTP do Microsoft 365/Outlook
-        smtp_server = 'smtp.office365.com'
-        smtp_port = 587
-        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail
-        senha_remetente = 'sua_senha'  # Use uma senha de aplicativo, não a senha da sua conta
-        gestor_email = 'gestor@empresa.com'  # Substitua pelo e-mail do gestor
-
-        # Configura o conteúdo do e-mail
-        msg = MIMEMultipart()
-        msg['From'] = remetente
-        msg['To'] = gestor_email
-        msg['Subject'] = 'Nova Reserva Realizada'
-        body = f"""
-        Uma nova reserva foi realizada:
-        - Nome: {nome_completo}
-        - Veículo: {carro}
-        - Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
-        - Hora de Retirada: {hrRetirada.strftime('%H:%M')}
-        - Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
-        - Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
-        - Destino: {destino}
-        """
-        msg.attach(MIMEText(body, 'plain'))
-
-        # Envia o e-mail
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()  # Inicia TLS
-        server.login(remetente, senha_remetente)
-        server.sendmail(remetente, gestor_email, msg.as_string())
         server.quit()
         return True
     except Exception as e:
@@ -153,46 +159,6 @@ def atualizar_senha(email, nova_senha):
     except sqlite3.Error as e:
         st.error(f"Erro ao atualizar a senha: {e}")
         return False
-
-# Função para criar a tabela de usuários
-def criar_tabela_usuarios():
-    with sqlite3.connect('reservas.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
-                            id INTEGER PRIMARY KEY,
-                            nome_completo TEXT,
-                            email TEXT UNIQUE,
-                            senha TEXT)''')
-        conn.commit()
-
-# Função para adicionar um novo usuário
-def adicionar_usuario(nome_completo, email, senha):
-    senha_hash = hashlib.sha256(senha.encode()).hexdigest()  # Criptografa a senha
-    try:
-        with sqlite3.connect('reservas.db') as conn:
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO usuarios (nome_completo, email, senha) VALUES (?, ?, ?)', (nome_completo, email, senha_hash))
-            conn.commit()
-        print(f"Usuário adicionado: {nome_completo}, {email}")
-        return True
-    except sqlite3.IntegrityError as e:
-        print(f"Erro ao adicionar usuário: {e}")
-        return False
-
-def verificar_usuario(email, senha):
-    senha_hash = hashlib.sha256(senha.encode()).hexdigest()
-    with sqlite3.connect('reservas.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT nome_completo, email FROM usuarios WHERE email = ? AND senha = ?', (email, senha_hash))
-        usuario = cursor.fetchone()
-        if usuario:
-            st.session_state.usuario_logado = usuario[1]
-            st.session_state.nome_completo = usuario[0]  # Armazena o nome completo na sessão
-            print(f"Usuário encontrado: {usuario}")
-            return True
-        else:
-            print("E-mail ou senha incorretos.")
-            return False
 
 # Função para arredondar a hora para o intervalo mais próximo
 def arredondar_para_intervalo(time_obj, intervalo_mins=30):
@@ -230,6 +196,45 @@ def adicionar_reserva(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, d
             return False
     except sqlite3.Error as e:
         print(f"Erro ao adicionar reserva: {e}")
+        return False
+
+# Função para enviar notificação ao gestor
+def enviar_notificacao_gestor(nome_completo, dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro, destino):
+    gestor_email = 'gestor_email@exemplo.com'  # Substitua pelo e-mail do gestor
+    subject = 'Nova Reserva Realizada'
+    body = f"""
+    Uma nova reserva foi realizada:
+    - Nome: {nome_completo}
+    - Veículo: {carro}
+    - Data de Retirada: {dtRetirada.strftime('%d/%m/%Y')}
+    - Hora de Retirada: {hrRetirada.strftime('%H:%M')}
+    - Data de Devolução: {dtDevolucao.strftime('%d/%m/%Y')}
+    - Hora de Devolução: {hrDevolucao.strftime('%H:%M')}
+    - Destino: {destino}
+    """
+    enviar_email(gestor_email, subject, body)
+
+def enviar_email(destino, subject, body):
+    try:
+        smtp_server = 'smtp.office365.com'
+        smtp_port = 587
+        remetente = 'seu_email@outlook.com'  # Substitua pelo seu e-mail do Outlook
+        senha_remetente = 'sua_senha_de_aplicativo'  # Use uma senha de aplicativo, não a senha da sua conta
+
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = destino
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(remetente, senha_remetente)
+        server.sendmail(remetente, destino, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
         return False
 
 # Função para liberar a vaga quando a reserva é cancelada
@@ -322,7 +327,7 @@ def veiculo_disponivel(dtRetirada, hrRetirada, dtDevolucao, hrDevolucao, carro):
     df_reservas['dtRetirada'] = pd.to_datetime(df_reservas['dtRetirada'], format='%d/%m/%Y')
     df_reservas['dtDevolucao'] = pd.to_datetime(df_reservas['dtDevolucao'], format='%d/%m/%Y')
     df_reservas['hrRetirada'] = pd.to_datetime(df_reservas['hrRetirada'], format='%H:%M:%S').dt.time
-    df_reservas['hrDevolucao'] = pd.to_datetime(df['hrDevolucao'], format='%H:%M:%S').dt.time
+    df_reservas['hrDevolucao'] = pd.to_datetime(df_reservas['hrDevolucao'], format='%H:%M:%S').dt.time
 
     for index, row in df_reservas.iterrows():
         if row['carro'] == carro and row['status'] != 'Cancelado':  # Verifica o status
